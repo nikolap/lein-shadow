@@ -27,21 +27,21 @@
       "reload"
       (server/reload!)
 
-      (api/with-runtime
-        (if-let [build-config (get-in config-map [:builds (keyword build)])]
-         ;; build commands
-         (case command
-           "compile"
-           (api/compile* build-config opts)
-           "release"
-           (api/release* build-config opts)
-           "watch"
-           (api/watch* build-config opts)
-           "check"
-           (api/check* build-config opts)
-           ;; default:
-           (lein/warn "Invalid command. Please use one of 'compile', 'release', or 'watch'"))
-         (lein/warn (str "Unable to find build " build ". Currently valid builds are: " (valid-builds config-map))))))))
+      (if-let [build-config (get-in config-map [:builds (keyword build)])]
+        ;; build commands
+        (api/with-runtime
+          (case command
+            "compile"
+            (api/compile* build-config opts)
+            "release"
+            (api/release* build-config opts)
+            "watch"
+            (api/watch* build-config opts)
+            "check"
+            (api/check* build-config opts)
+            ;; default:
+            (lein/warn "Invalid command. Please use one of 'compile', 'release', 'watch', or 'check'")))
+        (lein/warn (str "Unable to find build " build ". Currently valid builds are: " (valid-builds config-map)))))))
 
 (defn shadow
   "Uses the :shadow-cljs key from your project.clj file as shadow-cljs config, separate from shadow-cljs.edn.
