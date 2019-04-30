@@ -3,18 +3,30 @@
             [clojure.tools.cli :as cli]
             [leiningen.core.main :as lein]
             [shadow.cljs.devtools.api :as api]
+            [shadow.cljs.devtools.config :as config]
             [shadow.cljs.devtools.cli-opts :as cli-opts]
             [shadow.cljs.devtools.server :as server]))
 
+(defn read-config
+  "Uses shadow-cljs' config pipeline to ensure config matches default slurped shadow-cljs.edn"
+  [config-map]
+  (-> config-map
+      (config/normalize)
+      (->> (merge config/default-config))
+      (update :builds #(merge config/default-builds %))
+      (assoc :user-config (config/load-user-config))))
+
 (defn valid-builds
-  [config]
-  (->> config
+  "Returns all valid builds"
+  [config-map]
+  (->> config-map
        :builds
        keys
        (map name)
        (string/join ", ")))
 
 (defn run-shadow-cljs!
+  "Execute shadow-cljs programmatically"
   [config-map command build & rest-args]
   (let [server-config (dissoc config-map :builds)
         opts          (:options (cli/parse-opts rest-args cli-opts/cli-spec))]
@@ -60,5 +72,5 @@ Valid commands:
   (if-let [config-map (:shadow-cljs project)]
     (if (empty? args)
       (lein/warn "No args provided.")
-      (apply run-shadow-cljs! config-map args))
+      (apply run-shadow-cljs! (read-config config-map) args))
     (lein/warn "No shadow-cljs config key defined in project.clj. Please add a config to go into shadow-cljs.edn")))
