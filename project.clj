@@ -3,6 +3,4 @@
   :url "https://gitlab.com/nikperic/lein-shadow"
   :license {:name "MIT License"
             :url  "https://opensource.org/licenses/MIT"}
-  :min-lein-version "2.5.3"
-  :dependencies [[thheller/shadow-cljs "2.8.33"]]
   :eval-in-leiningen true)

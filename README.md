@@ -2,6 +2,8 @@
 
 A Leiningen plugin to help keep your project configuration in your project.clj file when using [shadow-cljs](https://github.com/thheller/shadow-cljs).
 
+Copies the configuration from a :shadow-cljs key in project.clj to a shadow-cljs.edn file then executes shadow-cljs with the args provided.
+
 ## Usage
 
 Put `[lein-shadow "0.1.0"]` into the `:plugins` vector of your project.clj.
