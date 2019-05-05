@@ -3,4 +3,5 @@
   :url "https://gitlab.com/nikperic/lein-shadow"
   :license {:name "MIT License"
             :url  "https://opensource.org/licenses/MIT"}
+  :dependencies [[metosin/jsonista "0.2.2"]]
   :eval-in-leiningen true)
