@@ -36,7 +36,8 @@ Refer to shadow-cljs docs for exhaustive CLI args, some possible args include:
   release [build]
   watch   [build]
 
-You can also run an npm install on packages defined in your project.clj file under the :npm-deps key"
+You can also run an npm install on packages defined in your project.clj file under the :npm-deps key with this command:
+  deps"
   [project & args]
   (if-let [command (first args)]
     (if (= "deps" command)

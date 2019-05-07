@@ -22,6 +22,12 @@ Some other possible commands are:
 
     $ lein shadow release app
 
+You can also use lein-shadow to manage your npm dependencies. Via an :npm-deps key in your project file, run
+
+    $ lein shadow deps
+
+This will generate the respective deps in a package.json file and execute `npm install` for you.
+
 ## License
 
 Copyright © 2019 Nikola Peric
