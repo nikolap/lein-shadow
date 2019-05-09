@@ -10,6 +10,8 @@ It also manages your npm dependencies in the :npm-deps key, checking for any cha
 
 Put `[lein-shadow "0.1.0"]` into the `:plugins` vector of your project.clj.
 
+This plugin requires that you have [shadow-cljs](https://github.com/thheller/shadow-cljs) in your `:dependencies` as well.
+
 ### Examples
 
 The most basic command is:
