@@ -34,14 +34,12 @@ Refer to shadow-cljs docs for exhaustive CLI args, some possible args include:
 
   compile [build]
   release [build]
-  watch   [build]
-
-You can also run an npm install on packages defined in your project.clj file under the :npm-deps key with this command:
-  deps"
+  watch   [build]"
   [project & args]
-  (if-let [command (first args)]
-    (if (= "deps" command)
+  (if (first args)
+    (do
       (npm-deps! (:npm-deps project))
+      (lein/info "Running shadow-cljs...")
       (if-let [config (:shadow-cljs project)]
         (let [args' (concat run-shadow-cljs args)]
           (spit "shadow-cljs.edn" (str shadow-cljs-preamble (pr-str config)))

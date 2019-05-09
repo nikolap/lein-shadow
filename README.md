@@ -2,7 +2,9 @@
 
 A Leiningen plugin to help keep your project configuration in your project.clj file when using [shadow-cljs](https://github.com/thheller/shadow-cljs).
 
-Copies the configuration from a :shadow-cljs key in project.clj to a shadow-cljs.edn file then executes shadow-cljs with the args provided.
+This plugin copies the configuration from a :shadow-cljs key in project.clj to a shadow-cljs.edn file then executes shadow-cljs with the args provided.
+
+It also manages your npm dependencies in the :npm-deps key, checking for any changes on every run.
 
 ## Usage
 
@@ -21,12 +23,6 @@ Some other possible commands are:
     $ lein shadow watch app
 
     $ lein shadow release app
-
-You can also use lein-shadow to manage your npm dependencies. Via an :npm-deps key in your project file, run
-
-    $ lein shadow deps
-
-This will generate the respective deps in a package.json file and execute `npm install` for you.
 
 ## License
 
