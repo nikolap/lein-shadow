@@ -20,12 +20,15 @@
 
 (defn npm-deps!
   [dependencies]
-  (lein/info "Preparing npm packages")
-  (spit "package.json"
-        (deps-vec->package-json dependencies))
-  (lein/info "Installing npm packages")
-  (sh "npm" "install")
-  (lein/info "npm packages successfully installed"))
+  (if (some? dependencies)
+    (do
+      (lein/info "Preparing npm packages")
+      (spit "package.json"
+            (deps-vec->package-json dependencies))
+      (lein/info "Installing npm packages")
+      (sh "npm" "install")
+      (lein/info "npm packages successfully installed"))
+    (lein/info "npm packages not managed by lein-shadow, skipping npm install")))
 
 (defn shadow
   "Helps keep your project configuration in your project.clj file when using shadow-cljs.
