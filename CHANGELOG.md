@@ -4,6 +4,7 @@ All notable changes to this project will be documented in this file. This change
 ## [Unreleased]
 ### Added
 - Skip `npm install` when `:npm-deps` are not present
+- Automatically add `:lein true` to shadow-cljs.edn output
 
 ## 0.1.1 - 2019-05-09
 ### Changed

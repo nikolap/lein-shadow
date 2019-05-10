@@ -45,7 +45,10 @@ Refer to shadow-cljs docs for exhaustive CLI args, some possible args include:
       (lein/info "Running shadow-cljs...")
       (if-let [config (:shadow-cljs project)]
         (let [args' (concat run-shadow-cljs args)]
-          (spit "shadow-cljs.edn" (str shadow-cljs-preamble (pr-str config)))
+          (->> (assoc config :lein true)
+               pr-str
+               (str shadow-cljs-preamble)
+               (spit "shadow-cljs.edn"))
           (apply run/run project args'))
         (lein/warn "No shadow-cljs config key defined in project.clj. Please add a config to go into shadow-cljs.edn")))
     (lein/warn "No command specified.")))
