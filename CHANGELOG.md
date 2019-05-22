@@ -1,7 +1,11 @@
 # Change Log
 All notable changes to this project will be documented in this file. This change log follows the conventions of [keepachangelog.com](http://keepachangelog.com/).
 
-## [Unreleased]
+## 0.1.3 - 2019-05-22
+### Added
+- meta-merge in shadow-cljs config from user defined `config.edn` file
+
+## 0.1.2 - 2019-05-10
 ### Added
 - Skip `npm install` when `:npm-deps` are not present
 - Automatically add `:lein true` to shadow-cljs.edn output
