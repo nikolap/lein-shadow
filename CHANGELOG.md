@@ -1,6 +1,10 @@
 # Change Log
 All notable changes to this project will be documented in this file. This change log follows the conventions of [keepachangelog.com](http://keepachangelog.com/).
 
+## 0.1.4 - UNRELEASED
+### Fixed
+- npm.cmd call on Windows OS
+
 ## 0.1.3 - 2019-05-22
 ### Added
 - meta-merge in shadow-cljs config from user defined `config.edn` file

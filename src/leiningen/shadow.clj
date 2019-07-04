@@ -1,5 +1,6 @@
 (ns leiningen.shadow
-  (:require [clojure.edn :as edn]
+  (:require [clojure.string :as string]
+            [clojure.edn :as edn]
             [clojure.java.io :as io]
             [clojure.java.shell :refer [sh]]
             [jsonista.core :as j]
@@ -21,6 +22,11 @@
   (j/write-value-as-string
     {:dependencies (deps-vec->deps-map dependencies)}))
 
+(def windows?
+  (string/starts-with? (System/getProperty "os.name") "Windows"))
+
+(def npm-command (if windows? "npm.cmd" "npm"))
+
 (defn npm-deps!
   [dependencies]
   (if (some? dependencies)
@@ -29,7 +35,7 @@
       (spit "package.json"
             (deps-vec->package-json dependencies))
       (lein/info "Installing npm packages")
-      (sh "npm" "install")
+      (sh npm-command "install")
       (lein/info "npm packages successfully installed"))
     (lein/info "npm packages not managed by lein-shadow, skipping npm install")))
 
