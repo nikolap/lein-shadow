@@ -22,9 +22,7 @@
   (j/write-value-as-string
     {:dependencies (deps-vec->deps-map dependencies)}))
 
-(def windows?
-  (string/starts-with? (System/getProperty "os.name") "Windows"))
-
+(def windows? (string/starts-with? (System/getProperty "os.name") "Windows"))
 (def npm-command (if windows? "npm.cmd" "npm"))
 
 (defn npm-deps!

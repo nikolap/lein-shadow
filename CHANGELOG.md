@@ -1,9 +1,9 @@
 # Change Log
 All notable changes to this project will be documented in this file. This change log follows the conventions of [keepachangelog.com](http://keepachangelog.com/).
 
-## 0.1.4 - UNRELEASED
+## 0.1.4 - 2019-07-05
 ### Fixed
-- npm.cmd call on Windows OS
+- Support npm.cmd call on Windows OS
 
 ## 0.1.3 - 2019-05-22
 ### Added
