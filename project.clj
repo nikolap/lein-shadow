@@ -4,5 +4,5 @@
   :license {:name "MIT License"
             :url  "https://opensource.org/licenses/MIT"}
   :dependencies [[meta-merge "1.0.0"]
-                 [metosin/jsonista "0.2.2"]]
+                 [metosin/jsonista "0.2.4"]]
   :eval-in-leiningen true)
