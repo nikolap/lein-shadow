@@ -71,9 +71,9 @@ Refer to shadow-cljs docs for exhaustive CLI args, some possible args include:
                             (reduced (edn/read-string (slurp file))))))
                       nil
                       (:source-paths project))
-          deps (:npm-deps deps-cljs)
-          dev-deps (:npm-dev-deps deps-cljs)]
-      (npm-deps! deps dev-deps)
+          fallback (or deps-cljs project)
+          {:keys [npm-deps npm-dev-deps]} fallback]
+      (npm-deps! npm-deps npm-dev-deps)
       (lein/info "Running shadow-cljs...")
       (if-let [config (:shadow-cljs project)]
         (let [shadow-cljs-profile (read-default-shadow-config)
