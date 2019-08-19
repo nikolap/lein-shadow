@@ -18,20 +18,22 @@
           {} dependencies))
 
 (defn deps-vec->package-json
-  [dependencies]
+  [dependencies dev-dependencies]
   (j/write-value-as-string
-    {:dependencies (deps-vec->deps-map dependencies)}))
+    {:dependencies (deps-vec->deps-map dependencies)
+     :devDependencies (deps-vec->deps-map dev-dependencies)}))
 
 (def windows? (string/starts-with? (System/getProperty "os.name") "Windows"))
 (def npm-command (if windows? "npm.cmd" "npm"))
 
 (defn npm-deps!
-  [dependencies]
-  (if (some? dependencies)
+  [dependencies dev-dependencies]
+  (if (or (some? dependencies)
+          (some? dev-dependencies))
     (do
       (lein/info "Preparing npm packages")
       (spit "package.json"
-            (deps-vec->package-json dependencies))
+            (deps-vec->package-json dependencies dev-dependencies))
       (lein/info "Installing npm packages")
       (sh npm-command "install")
       (lein/info "npm packages successfully installed"))
@@ -62,8 +64,16 @@ Refer to shadow-cljs docs for exhaustive CLI args, some possible args include:
   watch   [build]"
   [project & args]
   (if (first args)
-    (do
-      (npm-deps! (:npm-deps project))
+    (let [deps-cljs (reduce
+                      (fn [_ source-path]
+                        (when-let [file (io/file source-path "deps.cljs")]
+                          (when (.exists file)
+                            (reduced (edn/read-string (slurp file))))))
+                      nil
+                      (:source-paths project))
+          fallback (or deps-cljs project)
+          {:keys [npm-deps npm-dev-deps]} fallback]
+      (npm-deps! npm-deps npm-dev-deps)
       (lein/info "Running shadow-cljs...")
       (if-let [config (:shadow-cljs project)]
         (let [shadow-cljs-profile (read-default-shadow-config)
