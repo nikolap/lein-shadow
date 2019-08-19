@@ -20,7 +20,7 @@
 (defn deps-vec->package-json
   [dependencies dev-dependencies]
   (j/write-value-as-string
-    {:dependencies (deps-vec->deps-map dependencies)
+    {:dependencies    (deps-vec->deps-map dependencies)
      :devDependencies (deps-vec->deps-map dev-dependencies)}))
 
 (def windows? (string/starts-with? (System/getProperty "os.name") "Windows"))
@@ -54,6 +54,18 @@
   (meta-merge (select-keys shadow-config [:source-paths :dependencies])
               project))
 
+(defn deps-cljs [project]
+  (reduce
+    (fn [_ source-path]
+      (when-let [file (io/file source-path "deps.cljs")]
+        (when (.exists file)
+          (-> file
+              (slurp)
+              (edn/read-string)
+              (reduced)))))
+    nil
+    (:source-paths project)))
+
 (defn shadow
   "Helps keep your project configuration in your project.clj file when using shadow-cljs.
 
@@ -64,15 +76,7 @@ Refer to shadow-cljs docs for exhaustive CLI args, some possible args include:
   watch   [build]"
   [project & args]
   (if (first args)
-    (let [deps-cljs (reduce
-                      (fn [_ source-path]
-                        (when-let [file (io/file source-path "deps.cljs")]
-                          (when (.exists file)
-                            (reduced (edn/read-string (slurp file))))))
-                      nil
-                      (:source-paths project))
-          fallback (or deps-cljs project)
-          {:keys [npm-deps npm-dev-deps]} fallback]
+    (let [{:keys [npm-deps npm-dev-deps]} (or (deps-cljs project) project)]
       (npm-deps! npm-deps npm-dev-deps)
       (lein/info "Running shadow-cljs...")
       (if-let [config (:shadow-cljs project)]
@@ -81,7 +85,7 @@ Refer to shadow-cljs docs for exhaustive CLI args, some possible args include:
               project'            (merge-project shadow-cljs-profile project)
               args'               (concat run-shadow-cljs args)]
           (->> (assoc config' :lein true)
-               pr-str
+               (pr-str)
                (str shadow-cljs-preamble)
                (spit "shadow-cljs.edn"))
           (apply run/run project' args'))
