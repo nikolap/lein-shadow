@@ -31,13 +31,17 @@
   (if (or (some? dependencies)
           (some? dev-dependencies))
     (do
-      (lein/info "Preparing npm packages")
+      (lein/info "lein-shadow - preparing npm package.json")
       (spit "package.json"
             (deps-vec->package-json dependencies dev-dependencies))
-      (lein/info "Installing npm packages")
-      (sh npm-command "install")
-      (lein/info "npm packages successfully installed"))
-    (lein/info "npm packages not managed by lein-shadow, skipping npm install")))
+      (lein/info "lein-shadow - installing npm packages")
+      (let [result (sh npm-command "install")]
+        (if (zero? (:exit result))
+          (lein/info "lein-shadow - npm packages successfully installed")
+          (lein/abort (str "lein-shadow - npm package installation failed with "
+                           (:out result)
+                           (:err result))))))
+    (lein/info "lein-shadow - npm packages not managed, skipping npm install")))
 
 (defn read-default-shadow-config []
   (let [file (io/file (System/getProperty "user.home") ".shadow-cljs" "config.edn")]
@@ -78,7 +82,7 @@ Refer to shadow-cljs docs for exhaustive CLI args, some possible args include:
   (if (first args)
     (let [{:keys [npm-deps npm-dev-deps]} (or (deps-cljs project) project)]
       (npm-deps! npm-deps npm-dev-deps)
-      (lein/info "Running shadow-cljs...")
+      (lein/info "lein-shadow - running shadow-cljs...")
       (if-let [config (:shadow-cljs project)]
         (let [shadow-cljs-profile (read-default-shadow-config)
               config'             (merge-config shadow-cljs-profile config)
@@ -89,5 +93,5 @@ Refer to shadow-cljs docs for exhaustive CLI args, some possible args include:
                (str shadow-cljs-preamble)
                (spit "shadow-cljs.edn"))
           (apply run/run project' args'))
-        (lein/warn "No shadow-cljs config key defined in project.clj. Please add a config to go into shadow-cljs.edn")))
-    (lein/warn "No command specified.")))
+        (lein/warn "lein-shadow - no :shadow-cljs config key defined in project.clj. Please add a config to go into shadow-cljs.edn")))
+    (lein/warn "lein-shadow - no command specified.")))
