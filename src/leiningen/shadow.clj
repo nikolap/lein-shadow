@@ -20,8 +20,8 @@
 (defn deps-vec->package-json
   [dependencies dev-dependencies]
   (j/write-value-as-string
-    {:dependencies    (deps-vec->deps-map dependencies)
-     :devDependencies (deps-vec->deps-map dev-dependencies)}))
+    {"dependencies"    (deps-vec->deps-map dependencies)
+     "devDependencies" (deps-vec->deps-map dev-dependencies)}))
 
 (def windows? (string/starts-with? (System/getProperty "os.name") "Windows"))
 (def npm-command (if windows? "npm.cmd" "npm"))
