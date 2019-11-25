@@ -4,3 +4,10 @@ pom.xml
 pom.xml.asc
 /.idea
 /target
+/examples/lein-shadow-example/node_modules/
+/examples/lein-shadow-example/resources/public/js/
+/examples/lein-shadow-example/.shadow-cljs/
+/examples/lein-shadow-example/package.json
+/examples/lein-shadow-example/shadow-cljs.edn
+/examples/lein-shadow-example/.lein-env
+/examples/lein-shadow-example/target/
