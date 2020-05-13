@@ -1,6 +1,18 @@
 # Change Log
 All notable changes to this project will be documented in this file. This change log follows the conventions of [keepachangelog.com](http://keepachangelog.com/).
 
+## 0.2.0 - 2020-05-13
+[PR 3  - Isaac Johnston](https://gitlab.com/nikperic/lein-shadow/merge_requests/3)
+### Added
+- Windows support
+### Improved
+- Make comment to not edit shadow-cljs.edn very obvious
+- Better docstrings and help text
+- Logging
+- Back up shadow-cljs.edn file if it appears to be unmanaged by lein-shadow
+### Changed
+- No longer overwrite package.json, instead install deps via npm
+
 ## 0.1.7 - 2019-11-13
 ### Fixed
 - Fix issue with keyword encoding when creating package.json file
