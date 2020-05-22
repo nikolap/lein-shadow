@@ -21,7 +21,7 @@
  ;; Any changes you make will be overwritten and lost.
  ;; Instead you should edit the value keyed :shadow-cljs in project.clj.
  ;;
- ;; More explaination: https://gitlab.com/nikperic/lein-shadow/-/tree/docs/shadow-cljs.edn.md
+ ;; More details: https://gitlab.com/nikperic/lein-shadow/-/tree/docs/shadow-cljs.edn.md
  ;;
  ;; Don't even check this file into your git repo. Add it to .gitignore.
  ;;
