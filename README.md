@@ -23,7 +23,7 @@ executed with the list of dependencies on every run.
 
 ## Usage
 
-Put `[lein-shadow "0.1.7"]` into the `:plugins` vector of your project.clj.
+Put `[lein-shadow "0.2.1"]` into the `:plugins` vector of your project.clj.
 
 This plugin requires that you have [shadow-cljs](https://github.com/thheller/shadow-cljs) in your `:dependencies` as well.
 

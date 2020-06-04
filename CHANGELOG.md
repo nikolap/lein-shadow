@@ -1,6 +1,10 @@
 # Change Log
 All notable changes to this project will be documented in this file. This change log follows the conventions of [keepachangelog.com](http://keepachangelog.com/).
 
+## 0.2.1 - 2020-06-04
+### Fixed
+- Fix typo in generated shadow-cljs.edn file [PR 4 - zefu](https://gitlab.com/nikperic/lein-shadow/merge_requests/4)
+
 ## 0.2.0 - 2020-05-13
 [PR 3  - Isaac Johnston](https://gitlab.com/nikperic/lein-shadow/merge_requests/3)
 ### Added
