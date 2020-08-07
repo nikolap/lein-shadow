@@ -5,7 +5,8 @@
             [clojure.java.shell :refer [sh]]
             [leiningen.core.main :as lein]
             [leiningen.run :as run]
-            [meta-merge.core :refer [meta-merge]]))
+            [meta-merge.core :refer [meta-merge]]
+            [clojure.data.json :as json]))
 
 (def ^:const run-shadow-cljs ["-m" "shadow.cljs.devtools.cli"])
 (def ^:const shadow-cljs-preamble "
@@ -52,13 +53,13 @@
     dependencies))
 
 (defn dependencies->npm-args
-  [dependencies dev-dependencies]
+  [npm-deps npm-dev-deps]
   (cond-> []
-          (not-empty dependencies)
-          (conj (into ["install" "--save" "--save-exact"] (dependencies->npm-packages dependencies)))
+          (not-empty npm-deps)
+          (conj (into ["install" "--save" "--save-exact"]) (dependencies->npm-packages npm-deps))
 
-          (not-empty dev-dependencies)
-          (conj (into ["install" "--save-dev" "--save-exact"] (dependencies->npm-packages dev-dependencies)))))
+          (not-empty npm-dev-deps)
+          (conj (into ["install" "--save-dev" "--save-exact"] (dependencies->npm-packages npm-dev-deps)))))
 
 (defn npm-sh!
   [preamble npm-args]
@@ -72,12 +73,12 @@
                       (:out result) (:err result))))))
 
 (defn npm-deps!
-  [dependencies dev-dependencies]
-  (if (or (some? dependencies)
-          (some? dev-dependencies))
+  [npm-deps npm-dev-deps]
+  (if (or (some? npm-deps)
+          (some? npm-dev-deps))
     (do
       (npm-sh! "NPM version" ["--version"])
-      (let [npm-args (dependencies->npm-args dependencies dev-dependencies)]
+      (let [npm-args (dependencies->npm-args npm-deps npm-dev-deps)]
         (run! (fn [args]
                 (npm-sh! "NPM install successful" args))
               npm-args)))
@@ -98,7 +99,7 @@
   (meta-merge (select-keys shadow-config [:source-paths :dependencies])
               project))
 
-(defn deps-cljs
+(defn read-deps-cljs
   "Reads the first `deps.cljs` file found in `:source-paths`, otherwise nil."
   [project]
   (reduce
@@ -127,6 +128,19 @@
       (lein/warn "lein-shadow - unmanaged shadow-cljs.edn file exists. Backing up at " backup-path)
       (io/copy shadow-file (io/file backup-path)))))
 
+(defn read-package-json
+  "Read, or create if not-exists, the package.json file in the npm-deps install-dir."
+  [npm-deps-install-dir package-name]
+  (let [package-json-file (io/file npm-deps-install-dir "package.json")]
+    (->
+      (if (.exists package-json-file)
+        (slurp package-json-file)
+        (let [package-json-content (str "{\n  \"name\": \"" package-name "\"\n}")]
+          (lein/info "lein-shadow - creating empty package.json")
+          (spit package-json-file package-json-content)
+          package-json-content))
+      (json/read-str))))
+
 (defn shadow
   "Helps keep your project configuration in your `project.clj` file when using
    shadow-cljs.
@@ -145,7 +159,16 @@
    - lein shadow watch   <one or more build ids>"
   [project & args]
   (if (first args)
-    (let [{:keys [npm-deps npm-dev-deps]} (or (deps-cljs project) project)]
+    (let [{:keys [npm-deps npm-dev-deps]} (or (read-deps-cljs project) project)
+          npm-deps-install-dir            (get-in project [:shadow-cljs :npm-deps :install-dir] lein/*cwd*)
+          package-name                    (if (= (:name project) (:group project))
+                                            (:name project)
+                                            (str (:name project) "/" (:group project)))
+          package-json                    (read-package-json npm-deps-install-dir package-name)
+          package-json-deps               (get package-json "dependencies")
+          package-json-dev-deps           (get package-json "devDependencies")]
+      (when-not (and (empty? package-json-deps) (empty? package-json-dev-deps))
+        (npm-sh! "Executing NPM install for existing package.json" ["install"]))
       (overwrite-shadow-check!)
       (npm-deps! npm-deps npm-dev-deps)
       (lein/info "lein-shadow - running shadow-cljs...")
