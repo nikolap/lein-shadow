@@ -34,8 +34,9 @@
  ;;
  ;; >>>>>>>>>>>>>>>>>>>>>>>> YOUR CHANGES WILL BE LOST <<<<<<<<<<<<<<<<<<<<<<<<<
  ;;
- ") ;; <- WARNING: A newline is required after the comment otherwise the entire
-    ;;             configuration string will be commented out when concatenated.
+ ")
+;; WARNING: A newline is required after the comment otherwise the entire
+;;          configuration string will be commented out when concatenated.
 
 (def windows? (string/starts-with? (System/getProperty "os.name") "Windows"))
 
@@ -56,7 +57,7 @@
   [npm-deps npm-dev-deps]
   (cond-> []
           (not-empty npm-deps)
-          (conj (into ["install" "--save" "--save-exact"]) (dependencies->npm-packages npm-deps))
+          (conj (into ["install" "--save" "--save-exact"] (dependencies->npm-packages npm-deps)))
 
           (not-empty npm-dev-deps)
           (conj (into ["install" "--save-dev" "--save-exact"] (dependencies->npm-packages npm-dev-deps)))))
@@ -69,8 +70,8 @@
       (case (:exit result)
         0 (lein/info "lein-shadow -" preamble (string/replace (:out result) "\n" ""))
         1 (lein/abort "lein-shadow - could not run the NPM command. Make sure NPM is installed and present in your Path https://nodejs.org/en/. Exiting.")
-          (lein/abort "lein-shadow - NPM exited with an unsuccessful exit code:" (:exit result) ". Output:"
-                      (:out result) (:err result))))))
+        (lein/abort "lein-shadow - NPM exited with an unsuccessful exit code:" (:exit result) ". Output:"
+                    (:out result) (:err result))))))
 
 (defn npm-deps!
   [npm-deps npm-dev-deps]
@@ -139,7 +140,7 @@
           (lein/info "lein-shadow - creating empty package.json")
           (spit package-json-file package-json-content)
           package-json-content))
-      (json/read-str))))
+      (json/read-str :key-fn keyword))))
 
 (defn shadow
   "Helps keep your project configuration in your `project.clj` file when using
@@ -157,16 +158,13 @@
    - lein shadow compile <one or more build ids>
    - lein shadow release <one or more build ids>
    - lein shadow watch   <one or more build ids>"
-  [project & args]
+  [{:keys [name group] :as project} & args]
   (if (first args)
     (let [{:keys [npm-deps npm-dev-deps]} (or (read-deps-cljs project) project)
-          npm-deps-install-dir            (get-in project [:shadow-cljs :npm-deps :install-dir] lein/*cwd*)
-          package-name                    (if (= (:name project) (:group project))
-                                            (:name project)
-                                            (str (:name project) "/" (:group project)))
-          package-json                    (read-package-json npm-deps-install-dir package-name)
-          package-json-deps               (get package-json "dependencies")
-          package-json-dev-deps           (get package-json "devDependencies")]
+          npm-deps-install-dir  (get-in project [:shadow-cljs :npm-deps :install-dir] lein/*cwd*)
+          package-name          (if (= name group) name (str name "/" group))
+          {package-json-deps     :dependencies
+           package-json-dev-deps :devDependencies} (read-package-json npm-deps-install-dir package-name)]
       (when-not (and (empty? package-json-deps) (empty? package-json-dev-deps))
         (npm-sh! "Executing NPM install for existing package.json" ["install"]))
       (overwrite-shadow-check!)

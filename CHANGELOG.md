@@ -1,6 +1,11 @@
 # Change Log
 All notable changes to this project will be documented in this file. This change log follows the conventions of [keepachangelog.com](http://keepachangelog.com/).
 
+## 0.2.2 - 2020-08-07
+[PR 5  - Isaac Johnston](https://gitlab.com/nikperic/lein-shadow/merge_requests/5)
+### Fixed
+- Fix edge cases with package.json / npm deps management
+
 ## 0.2.1 - 2020-06-04
 ### Fixed
 - Fix typo in generated shadow-cljs.edn file [PR 4 - zefu](https://gitlab.com/nikperic/lein-shadow/merge_requests/4)

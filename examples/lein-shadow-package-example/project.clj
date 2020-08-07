@@ -37,12 +37,6 @@
                         :devtools   {:after-load lein-shadow-example.core/mount-root}}}
    :dev-http     {3000 {:root    "resources/public"
                         :handler lein-shadow-example.handler/app}}}
-
-  ;; Note that if a `deps.cljs` file is found in `:source-paths` it will take
-  ;; priority over `:npm-deps` here in `project.clj` and be used instead.
-  :npm-deps [[create-react-class "15.6.3"]
-             [react "16.8.6"]
-             [react-dom "16.8.6"]]
   ;; EXAMPLE CONFIG FOR lein-shadow PLUGIN END
 
   :ring {:handler      lein-shadow-example.handler/app
