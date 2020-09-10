@@ -142,6 +142,14 @@
           package-json-content))
       (json/read-str :key-fn keyword))))
 
+(defn package-locks-exist?
+  "Returns true if package-lock.json or npm-shrinkwrap.json exist."
+  [npm-deps-install-dir]
+  (let [package-lock-json-file (io/file npm-deps-install-dir "package-lock.json")
+        npm-shrinkwrap-json-file (io/file npm-deps-install-dir "npm-shrinkwrap.json")]
+    (or (.exists package-lock-json-file)
+        (.exists npm-shrinkwrap-json-file))))
+
 (defn shadow
   "Helps keep your project configuration in your `project.clj` file when using
    shadow-cljs.
@@ -164,9 +172,11 @@
           npm-deps-install-dir  (get-in project [:shadow-cljs :npm-deps :install-dir] lein/*cwd*)
           package-name          (if (= name group) name (str name "/" group))
           {package-json-deps     :dependencies
-           package-json-dev-deps :devDependencies} (read-package-json npm-deps-install-dir package-name)]
-      (when-not (and (empty? package-json-deps) (empty? package-json-dev-deps))
-        (npm-sh! "Executing NPM install for existing package.json" ["install"]))
+           package-json-dev-deps :devDependencies} (read-package-json npm-deps-install-dir package-name)
+          npm-install-command   (if (package-locks-exist? npm-deps-install-dir) "ci" "install")
+          run-npm-install?      (not (and (empty? package-json-deps) (empty? package-json-dev-deps)))]
+      (when run-npm-install? 
+        (npm-sh! (format "Executing 'npm %s' for existing package.json" npm-install-command) [npm-install-command]))
       (overwrite-shadow-check!)
       (npm-deps! npm-deps npm-dev-deps)
       (lein/info "lein-shadow - running shadow-cljs...")
