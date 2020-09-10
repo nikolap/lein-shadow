@@ -162,7 +162,7 @@
   (if (first args)
     (let [{:keys [npm-deps npm-dev-deps]} (or (read-deps-cljs project) project)
           npm-deps-install-dir  (get-in project [:shadow-cljs :npm-deps :install-dir] lein/*cwd*)
-          package-name          (if (= name group) name (str name "/" group))
+          package-name          (if (= name group) name (str group "." name))
           {package-json-deps     :dependencies
            package-json-dev-deps :devDependencies} (read-package-json npm-deps-install-dir package-name)]
       (when-not (and (empty? package-json-deps) (empty? package-json-dev-deps))
