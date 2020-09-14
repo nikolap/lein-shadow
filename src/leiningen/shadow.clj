@@ -45,6 +45,11 @@
     ["cmd" "/C" "npm"]
     ["npm"]))
 
+(def npm-not-found-err
+  (if windows?
+    "is not recognized as an internal or external command"
+    "command not found"))
+
 (defn dependencies->npm-packages
   [dependencies]
   (reduce
@@ -67,22 +72,21 @@
   (let [command (into npm-command npm-args)]
     (lein/info "lein-shadow - running:" (string/join " " command))
     (let [result (apply sh command)]
-      (case (:exit result)
-        0 (lein/info "lein-shadow -" preamble (string/replace (:out result) "\n" ""))
-        1 (lein/abort "lein-shadow - could not run the NPM command. Make sure NPM is installed and present in your Path https://nodejs.org/en/. Exiting.")
-        (lein/abort "lein-shadow - NPM exited with an unsuccessful exit code:" (:exit result) ". Output:"
-                    (:out result) (:err result))))))
-
+      (if (zero? (:exit result))
+        (lein/info "lein-shadow -" preamble (:out result))
+        (if (re-find (re-pattern npm-not-found-err) (:err result)) 
+          (lein/abort "lein-shadow - 'npm' could not be found. Make sure 'npm' is installed and present in your PATH. See https://nodejs.org/en/.\n" (:err result))
+          (lein/abort "lein-shadow - 'npm' exited with the unsuccessful exit code" (:exit result) "and the error output:\n" (:err result)))))))
+        
 (defn npm-deps!
   [npm-deps npm-dev-deps]
   (if (or (some? npm-deps)
           (some? npm-dev-deps))
-    (do
-      (npm-sh! "NPM version" ["--version"])
-      (let [npm-args (dependencies->npm-args npm-deps npm-dev-deps)]
-        (run! (fn [args]
-                (npm-sh! "NPM install successful" args))
-              npm-args)))
+    
+    (let [npm-args (dependencies->npm-args npm-deps npm-dev-deps)]
+      (run! (fn [args]
+              (npm-sh! "'npm install ...' successful:\n" args))
+              npm-args))
     (lein/info "lein-shadow - npm packages not managed, skipping npm install")))
 
 (defn read-default-shadow-config []
@@ -135,9 +139,11 @@
   (let [package-json-file (io/file npm-deps-install-dir "package.json")]
     (->
       (if (.exists package-json-file)
-        (slurp package-json-file)
+        (do
+          (lein/info "lein-shadow - found existing package.json at" (.getPath package-json-file))
+          (slurp package-json-file))
         (let [package-json-content (str "{\n  \"name\": \"" package-name "\"\n}")]
-          (lein/info "lein-shadow - creating empty package.json")
+          (lein/info "lein-shadow - creating empty package.json at" (.getPath package-json-file))
           (spit package-json-file package-json-content)
           package-json-content))
       (json/read-str :key-fn keyword))))
@@ -167,28 +173,30 @@
    - lein shadow release <one or more build ids>
    - lein shadow watch   <one or more build ids>"
   [{:keys [name group] :as project} & args]
-  (if (first args)
-    (let [{:keys [npm-deps npm-dev-deps]} (or (read-deps-cljs project) project)
-          npm-deps-install-dir  (get-in project [:shadow-cljs :npm-deps :install-dir] lein/*cwd*)
-          package-name          (if (= name group) name (str group "." name))
-          {package-json-deps     :dependencies
-           package-json-dev-deps :devDependencies} (read-package-json npm-deps-install-dir package-name)
-          npm-install-command   (if (package-locks-exist? npm-deps-install-dir) "ci" "install")
-          run-npm-install?      (not (and (empty? package-json-deps) (empty? package-json-dev-deps)))]
-      (when run-npm-install? 
-        (npm-sh! (format "Executing 'npm %s' for existing package.json" npm-install-command) [npm-install-command]))
-      (overwrite-shadow-check!)
-      (npm-deps! npm-deps npm-dev-deps)
-      (lein/info "lein-shadow - running shadow-cljs...")
-      (if-let [config (:shadow-cljs project)]
-        (let [shadow-cljs-profile (read-default-shadow-config)
-              config'             (merge-config shadow-cljs-profile config)
-              project'            (merge-project shadow-cljs-profile project)
-              args'               (concat run-shadow-cljs args)]
-          (->> (assoc config' :lein true)
-               (pr-str)
-               (str shadow-cljs-preamble)
-               (spit "shadow-cljs.edn"))
-          (apply run/run project' args'))
-        (lein/warn "lein-shadow - no :shadow-cljs config key defined in project.clj. Please add a config to go into shadow-cljs.edn")))
-    (lein/warn "lein-shadow - no command specified.")))
+  (if-not (first args)
+    (lein/warn "lein-shadow - no command specified.")
+    (do
+      (npm-sh! "'npm' version" ["--version"])
+      (let [{:keys [npm-deps npm-dev-deps]} (or (read-deps-cljs project) project)
+            npm-deps-install-dir  (get-in project [:shadow-cljs :npm-deps :install-dir] lein/*cwd*)
+            package-name          (if (= name group) name (str group "." name))
+            {package-json-deps     :dependencies
+             package-json-dev-deps :devDependencies} (read-package-json npm-deps-install-dir package-name)
+            npm-install-command   (if (package-locks-exist? npm-deps-install-dir) "ci" "install")
+            run-npm-install?      (not (and (empty? package-json-deps) (empty? package-json-dev-deps)))]
+        (when run-npm-install? 
+          (npm-sh! (format "'npm %s' successful:\n" npm-install-command) [npm-install-command]))
+        (overwrite-shadow-check!)
+        (npm-deps! npm-deps npm-dev-deps)
+        (lein/info "lein-shadow - running shadow-cljs...")
+        (if-let [config (:shadow-cljs project)]
+          (let [shadow-cljs-profile (read-default-shadow-config)
+                config'             (merge-config shadow-cljs-profile config)
+                project'            (merge-project shadow-cljs-profile project)
+                args'               (concat run-shadow-cljs args)]
+            (->> (assoc config' :lein true)
+                 (pr-str)
+                 (str shadow-cljs-preamble)
+                 (spit "shadow-cljs.edn"))
+            (apply run/run project' args'))
+          (lein/warn "lein-shadow - no :shadow-cljs config key defined in project.clj. Please add a config to go into shadow-cljs.edn"))))))
