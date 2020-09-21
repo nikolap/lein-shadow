@@ -50,6 +50,13 @@ Some other possible commands are:
 3. All deps in `project.clj`, with a custom `package.json` configuration for scripting (see [examples/lein-shadow-package-alt-example](/examples/lein-shadow-package-alt-example))
 4. Clojure deps in `project.clj`, with js deps in a `deps.cljs` file on the source path (see [examples/lein-shadow-deps-example](/examples/lein-shadow-deps-example))
 
+## Contributors
+
+In alphabetical order
+
+- [Isaac Johnston](https://gitlab.com/superstructor)
+- [zefu](https://gitlab.com/zefu)
+
 ## License
 
 Copyright © 2019 Nikola Peric

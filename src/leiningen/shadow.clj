@@ -7,8 +7,7 @@
             [leiningen.core.eval :refer [eval-in-project]]
             [leiningen.run :as run]
             [meta-merge.core :refer [meta-merge]]
-            [clojure.data.json :as json]
-            #_[shadow.cljs.devtools.server.npm-deps :as npm-deps]))
+            [clojure.data.json :as json]))
 
 (def ^:const run-shadow-cljs ["-m" "shadow.cljs.devtools.cli"])
 (def ^:const shadow-config-preamble "
@@ -105,7 +104,7 @@
   (.exists (yarn-lock-file shadow-config)))
 
 (defn package-json-name
-  [{:keys [group name] :as project}]
+  [{:keys [group name]}]
   (if (= name group) name (str group "." name)))
 
 (defn node-package-manager
@@ -133,18 +132,23 @@
   [shadow-config preamble package-manager-args]
   (let [command (into (package-manager-command shadow-config) package-manager-args)]
     (lein/info "lein-shadow - running:" (string/join " " command))
-    (let [result (apply sh command)]
-      (if (zero? (:exit result))
-        (lein/info "lein-shadow -" preamble (:out result))
-        (if (re-find (re-pattern command-not-found-err) (:err result))
+    (let [{exit-code :exit
+           out-msg   :out
+           err-msg   :err} (apply sh command)]
+      (if (zero? exit-code)
+        (lein/info "lein-shadow -" preamble out-msg)
+        (if (re-find (re-pattern command-not-found-err) err-msg)
           (let [command-type (node-package-manager shadow-config)
                 command-name (name command-type)
                 command-url  (case command-type
                                :npm "https://nodejs.org"
                                :yarn "https://classic.yarnpkg.com/"
                                (format "the documentation for '%s'" command-name))]
-            (lein/abort (format "lein-shadow - '%s' could not be found. Make sure '%s' is installed and present in your PATH. See %s. Error output:\n" command-name command-name command-url) (:err result))
-            (lein/abort (format "lein-shadow - '%s' exited with the unsuccessful exit code") (:exit result) "and the error output:\n" (:err result))))))))
+            (lein/abort (format "lein-shadow - '%s' could not be found. Make sure '%s' is installed and present in your PATH. See %s. Error output:\n"
+                                command-name command-name command-url)
+                        err-msg)
+            (lein/abort (format "lein-shadow - '%s' exited with the unsuccessful exit code %s and the error output:\n" exit-code)
+                        err-msg)))))))
 
 (defn node-package-manager-version!
   [shadow-config]
@@ -159,9 +163,9 @@
     (fn [[dep-id dep-version]]
       (merge
         annotations
-        {:id dep-id
+        {:id      dep-id
          :version dep-version
-         :url url}))
+         :url     url}))
     deps-map))
 
 (defn read-node-deps-from-deps-cljs
@@ -171,12 +175,13 @@
     (fn [_ source-path]
       (when-let [deps-cljs-file (io/file source-path "deps.cljs")]
         (when (.exists deps-cljs-file)
-          (lein/info "lein-shadow - reading node dependencies from" (.getCanonicalPath deps-cljs-file))
-          (let [{:keys [npm-deps npm-dev-deps]} (-> deps-cljs-file (slurp) (edn/read-string))]
-            (reduced
-              (into
-                (node-deps-map->vec npm-deps (str (.getCanonicalPath deps-cljs-file) "!:npm-deps") {:dev false})
-                (node-deps-map->vec npm-dev-deps (str (.getCanonicalPath deps-cljs-file) "!:npm-dev-deps") {:dev true})))))))
+          (let [canonical-deps-path (.getCanonicalPath deps-cljs-file)]
+            (lein/info "lein-shadow - reading node dependencies from" canonical-deps-path)
+            (let [{:keys [npm-deps npm-dev-deps]} (-> deps-cljs-file (slurp) (edn/read-string))]
+              (reduced
+                (into
+                  (node-deps-map->vec npm-deps (str canonical-deps-path "!:npm-deps") {:dev false})
+                  (node-deps-map->vec npm-dev-deps (str canonical-deps-path "!:npm-dev-deps") {:dev true}))))))))
     nil
     (:source-paths project)))
 
@@ -190,16 +195,17 @@
 
 (defn read-deps-from-package-json
   [shadow-config]
-  (let [file (package-json-file shadow-config)]
-    (lein/info "lein-shadow - found existing package.json file at" (.getCanonicalPath file))
+  (let [file                (package-json-file shadow-config)
+        canonical-file-path (.getCanonicalPath file)]
+    (lein/info "lein-shadow - found existing package.json file at" canonical-file-path)
     (let [{:keys [dependencies devDependencies]} (-> file (slurp) (json/read-str :key-fn keyword))]
       (into
-        (node-deps-map->vec dependencies (str (.getCanonicalPath file) "!:dependencies") {:dev false})
-        (node-deps-map->vec devDependencies (str (.getCanonicalPath file) "!:devDependencies") {:dev true})))))
+        (node-deps-map->vec dependencies (str canonical-file-path "!:dependencies") {:dev false})
+        (node-deps-map->vec devDependencies (str canonical-file-path "!:devDependencies") {:dev true})))))
 
 (defn create-empty-package-json!
   [project shadow-config]
-  (let [file (package-json-file shadow-config)
+  (let [file                 (package-json-file shadow-config)
         package-json-content (str "{\n  \"name\": \"" (package-json-name project) "\"\n}")]
     (lein/info "lein-shadow - creating empty package.json in" (package-install-dir shadow-config))
     (spit file package-json-content)))
@@ -207,11 +213,10 @@
 (defn node-package-manager-rebuild-node_modules!
   [shadow-config]
   (let [command-type (node-package-manager shadow-config)
-        command-args (if (= :yarn command-type)
-                       ["add"]
-                       (if (package-locks-exist? shadow-config)
-                         ["ci"]
-                         ["install"]))]
+        command-args (cond
+                       (= :yarn command-type) ["add"]
+                       (package-locks-exist? shadow-config) ["ci"]
+                       :else ["install"])]
     (node-package-manager-sh! shadow-config "node package manager successfully built node_modules directory:\n" command-args)))
 
 (defn node-package-manager-install-args
@@ -220,14 +225,16 @@
     (fn [args {:keys [id version]}]
       (let [pred (fn [package-json-dep]
                    (when (and (= (name id) (name (:id package-json-dep)))
-                              (= version)  (:version package-json-dep))
+                              (= version) (:version package-json-dep))
                      package-json-dep))]
-        (if-let [{:keys [url] :as package-json-dep} (some pred package-json-deps)]
+        (if-let [{:keys [url]} (some pred package-json-deps)]
           (do
-            (lein/info "lein-shadow - " (format "node package %s@%s already exists in %s." id version url))
+            (lein/info "lein-shadow - " (format "node package %s@%s already exists in %s."
+                                                id version url))
             args)
           (do
-            (lein/info "lein-shadow - " (format "node package %s@%s does not exist in %s. Adding." id version (or (:url (first package-json-deps) "package.json"))))
+            (lein/info "lein-shadow - " (format "node package %s@%s does not exist in %s. Adding."
+                                                id version (:url (first package-json-deps) "package.json")))
             (conj args (str (name id) "@" version))))))
     []
     lein-node-deps))
@@ -249,22 +256,22 @@
                                   (into ["install" "--save-dev" "--save-exact"] lein-node-dev-deps-install-args))))))
 
 (defn node-deps!
- [project shadow-config]
- (node-package-manager-version! shadow-config)
- (let [package-json-deps (if (package-json-exists? shadow-config)
-                           (read-deps-from-package-json shadow-config)
-                           (do
-                             (create-empty-package-json! project shadow-config)
-                             []))
+  [project shadow-config]
+  (node-package-manager-version! shadow-config)
+  (let [package-json-deps (if (package-json-exists? shadow-config)
+                            (read-deps-from-package-json shadow-config)
+                            (do
+                              (create-empty-package-json! project shadow-config)
+                              []))
 
-       lein-node-deps    (or (read-node-deps-from-deps-cljs project)
-                             (read-node-deps-from-project project))]
-   (when-not (empty? package-json-deps)
-     (node-package-manager-rebuild-node_modules! shadow-config))
+        lein-node-deps    (or (read-node-deps-from-deps-cljs project)
+                              (read-node-deps-from-project project))]
+    (when-not (empty? package-json-deps)
+      (node-package-manager-rebuild-node_modules! shadow-config))
 
-   (if-not (empty? lein-node-deps)
-     (node-package-manager-install-missing! shadow-config package-json-deps lein-node-deps)
-     (lein/info "lein-shadow - node packages not managed, skipping node package manager installs"))))
+    (if-not (empty? lein-node-deps)
+      (node-package-manager-install-missing! shadow-config package-json-deps lein-node-deps)
+      (lein/info "lein-shadow - node packages not managed, skipping node package manager installs"))))
 
 
 (defn overwrite-shadow-backup!
@@ -313,7 +320,7 @@
     (if-let [shadow-config (:shadow-cljs project)]
       (let [shadow-default-config (read-default-shadow-config)
             shadow-config-merged  (merge-shadow-config shadow-default-config shadow-config)
-            project-merged        (merge-project       shadow-default-config project)]
+            project-merged        (merge-project shadow-default-config project)]
         (node-deps! project-merged shadow-config-merged)
         (write-shadow-config! shadow-config-merged)
         (shadow! project-merged args))
