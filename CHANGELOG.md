@@ -1,7 +1,7 @@
 # Change Log
 All notable changes to this project will be documented in this file. This change log follows the conventions of [keepachangelog.com](http://keepachangelog.com/).
 
-## 0.3.0 - 2020-09-21
+## 0.3.0 - 2020-09-22
 ### Added
 - Overhaul to NPM behaviour [PR 10  - Isaac Johnston](https://gitlab.com/nikperic/lein-shadow/merge_requests/10)
 ### Improved
