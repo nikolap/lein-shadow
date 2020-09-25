@@ -225,7 +225,7 @@
     (fn [args {:keys [id version]}]
       (let [pred (fn [package-json-dep]
                    (when (and (= (name id) (name (:id package-json-dep)))
-                              (= version) (:version package-json-dep))
+                              (= version   (:version package-json-dep)))
                      package-json-dep))]
         (if-let [{:keys [url]} (some pred package-json-deps)]
           (do
