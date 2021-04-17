@@ -60,11 +60,19 @@
   []
   (io/file (System/getProperty "user.home") ".shadow-cljs" "config.edn"))
 
+(defn slurp-and-read-edn!
+  [f]
+  (-> f (slurp) (edn/read-string)))
+
+(defn slurp-and-read-json!
+  [f]
+  (-> f (slurp) (json/read-str :key-fn keyword)))
+
 (defn read-default-shadow-config
   []
   (let [file (default-shadow-config-file)]
     (when (.exists file)
-      (-> file slurp edn/read-string))))
+      (slurp-and-read-edn! file))))
 
 
 (defn package-install-dir
@@ -168,22 +176,25 @@
          :url     url}))
     deps-map))
 
-(defn read-node-deps-from-deps-cljs
-  "Reads the first `deps.cljs` file found in `project` `:source-paths`, otherwise nil."
+(defn find-deps-cljs
+  "Finds the first `deps.cljs` file found in `project` `:source-paths`, otherwise nil."
   [project]
   (reduce
     (fn [_ source-path]
       (when-let [deps-cljs-file (io/file source-path "deps.cljs")]
         (when (.exists deps-cljs-file)
-          (let [canonical-deps-path (.getCanonicalPath deps-cljs-file)]
-            (lein/info "lein-shadow - reading node dependencies from" canonical-deps-path)
-            (let [{:keys [npm-deps npm-dev-deps]} (-> deps-cljs-file (slurp) (edn/read-string))]
-              (reduced
-                (into
-                  (node-deps-map->vec npm-deps (str canonical-deps-path "!:npm-deps") {:dev false})
-                  (node-deps-map->vec npm-dev-deps (str canonical-deps-path "!:npm-dev-deps") {:dev true}))))))))
+          (reduced deps-cljs-file))))
     nil
     (:source-paths project)))
+
+(defn read-node-deps-from-deps-cljs
+  [deps-cljs-file]
+  (let [canonical-deps-path (.getCanonicalPath deps-cljs-file)]
+    (lein/info "lein-shadow - reading node dependencies from" canonical-deps-path)
+    (let [{:keys [npm-deps npm-dev-deps]} (slurp-and-read-edn! deps-cljs-file)]
+      (into
+        (node-deps-map->vec npm-deps (str canonical-deps-path "!:npm-deps") {:dev false})
+        (node-deps-map->vec npm-dev-deps (str canonical-deps-path "!:npm-dev-deps") {:dev true})))))
 
 (defn read-node-deps-from-project
   [project]
@@ -198,7 +209,7 @@
   (let [file                (package-json-file shadow-config)
         canonical-file-path (.getCanonicalPath file)]
     (lein/info "lein-shadow - found existing package.json file at" canonical-file-path)
-    (let [{:keys [dependencies devDependencies]} (-> file (slurp) (json/read-str :key-fn keyword))]
+    (let [{:keys [dependencies devDependencies]} (slurp-and-read-json! file)]
       (into
         (node-deps-map->vec dependencies (str canonical-file-path "!:dependencies") {:dev false})
         (node-deps-map->vec devDependencies (str canonical-file-path "!:devDependencies") {:dev true})))))
@@ -225,7 +236,7 @@
     (fn [args {:keys [id version]}]
       (let [pred (fn [package-json-dep]
                    (when (and (= (name id) (name (:id package-json-dep)))
-                              (= version   (:version package-json-dep)))
+                              (= version (:version package-json-dep)))
                      package-json-dep))]
         (if-let [{:keys [url]} (some pred package-json-deps)]
           (do
@@ -255,6 +266,19 @@
                                   (into ["add"] lein-node-dev-deps-install-args ["--dev" "--exact"])
                                   (into ["install" "--save-dev" "--save-exact"] lein-node-dev-deps-install-args))))))
 
+(def exclude-from-project-json [:replace-project-json? :npm-dev-deps :npm-deps])
+
+(defn inject-project-json-keys!
+  [shadow-config deps-cljs-file]
+  (prn deps-cljs-file)
+  (let [{:keys [replace-project-json?] :as config} (slurp-and-read-edn! deps-cljs-file)]
+    (when replace-project-json?
+      (let [package-json    (package-json-file shadow-config)
+            package-content (slurp-and-read-json! package-json)]
+        (->> (apply dissoc config exclude-from-project-json)
+             (merge package-content)
+             (spit package-json))))))
+
 (defn node-deps!
   [project shadow-config]
   (node-package-manager-version! shadow-config)
@@ -263,15 +287,20 @@
                             (do
                               (create-empty-package-json! project shadow-config)
                               []))
+        deps-cljs-file    (find-deps-cljs project)
 
-        lein-node-deps    (or (read-node-deps-from-deps-cljs project)
-                              (read-node-deps-from-project project))]
+        lein-node-deps    (if (some? deps-cljs-file)
+                            (read-node-deps-from-deps-cljs deps-cljs-file)
+                            (read-node-deps-from-project project))]
     (when-not (empty? package-json-deps)
       (node-package-manager-rebuild-node_modules! shadow-config))
 
     (if-not (empty? lein-node-deps)
       (node-package-manager-install-missing! shadow-config package-json-deps lein-node-deps)
-      (lein/info "lein-shadow - node packages not managed, skipping node package manager installs"))))
+      (lein/info "lein-shadow - node packages not managed, skipping node package manager installs"))
+
+    (when (some? deps-cljs-file)
+      (inject-project-json-keys! shadow-config deps-cljs-file))))
 
 
 (defn overwrite-shadow-backup!
