@@ -10,7 +10,8 @@ to the `shadow-cljs.edn` file then executes `shadow-cljs` with the args provided
 
 It also manages your `npm` dependencies for the current project by using either:
 1. the `:npm-deps` and `:npm-dev-deps` keys in the first `deps.cljs` file found
-   in the `:source-paths`; or
+   in the `:source-paths`. If there are additional keys present, it will merge
+   those in to your `package.json`; or
 2. the `:npm-deps` and `:npm-dev-deps` keys in in `project.clj`.  
 
 It will only use **one** of these for `npm` dependencies, not both. The presence of `deps.cljs` takes priority over `project.clj`
