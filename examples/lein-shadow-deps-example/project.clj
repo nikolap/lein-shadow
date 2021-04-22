@@ -25,7 +25,7 @@
             [lein-cljsbuild "1.1.7"]
             [lein-asset-minifier "0.4.6"
              :exclusions [org.clojure/clojure]]
-            [lein-shadow "0.3.0"]]
+            [lein-shadow "0.4.0"]]
 
   ;; EXAMPLE CONFIG FOR lein-shadow PLUGIN START
   :shadow-cljs
