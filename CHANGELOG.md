@@ -1,6 +1,10 @@
 # Change Log
 All notable changes to this project will be documented in this file. This change log follows the conventions of [keepachangelog.com](http://keepachangelog.com/).
 
+## 0.4.0 - xx
+### Added
+- Merge in additional keys from `deps.cljs` to `package.json`
+
 ## 0.3.1 - 2020-09-25
 ### Fixed
 - Fix node package version comparison bug [PR 11  - Isaac Johnston](https://gitlab.com/nikperic/lein-shadow/merge_requests/11)

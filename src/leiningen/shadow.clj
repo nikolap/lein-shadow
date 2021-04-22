@@ -62,11 +62,11 @@
 
 (defn slurp-and-read-edn!
   [f]
-  (-> f (slurp) (edn/read-string)))
+  (some-> f (slurp) (edn/read-string)))
 
 (defn slurp-and-read-json!
   [f]
-  (-> f (slurp) (json/read-str :key-fn keyword)))
+  (some-> f (slurp) (json/read-str :key-fn keyword)))
 
 (defn read-default-shadow-config
   []
@@ -266,18 +266,19 @@
                                   (into ["add"] lein-node-dev-deps-install-args ["--dev" "--exact"])
                                   (into ["install" "--save-dev" "--save-exact"] lein-node-dev-deps-install-args))))))
 
-(def exclude-from-project-json [:replace-project-json? :npm-dev-deps :npm-deps])
+(def exclude-from-project-json [:npm-dev-deps :npm-deps])
 
 (defn inject-project-json-keys!
   [shadow-config deps-cljs-file]
-  (prn deps-cljs-file)
-  (let [{:keys [replace-project-json?] :as config} (slurp-and-read-edn! deps-cljs-file)]
-    (when replace-project-json?
-      (let [package-json    (package-json-file shadow-config)
-            package-content (slurp-and-read-json! package-json)]
-        (->> (apply dissoc config exclude-from-project-json)
-             (merge package-content)
-             (spit package-json))))))
+  (let [config          (slurp-and-read-edn! deps-cljs-file)
+        package-json    (package-json-file shadow-config)
+        package-content (slurp-and-read-json! package-json)
+        config-to-merge (apply dissoc config exclude-from-project-json)]
+    (when (not-empty config-to-merge)
+      (->> config-to-merge
+           (merge package-content)
+           (json/write-str)
+           (spit package-json)))))
 
 (defn node-deps!
   [project shadow-config]
